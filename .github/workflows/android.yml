@@ -1,17 +1,16 @@
 name: Hydronix APK
 
 on:
-push:
-branches:
-- main
+ push:
+ branches:
+ - main
 
 jobs:
-build:
-runs-on: ubuntu-22.04
+ build:
+  runs-on: ubuntu-22.04
 
 
 steps:
-
   - name: Checkout repository
     uses: actions/checkout@v4
 
@@ -40,11 +39,8 @@ steps:
     run: |
       mkdir -p $HOME/android-sdk/cmdline-tools
       cd $HOME/android-sdk/cmdline-tools
-
       wget https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -O sdk.zip
-
       unzip sdk.zip
-
       mv cmdline-tools latest
 
   - name: Set Android environment
@@ -73,4 +69,3 @@ steps:
     with:
       name: Hydronix-APK
       path: bin/*.apk
-```
