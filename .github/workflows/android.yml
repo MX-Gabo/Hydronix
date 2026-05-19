@@ -40,14 +40,35 @@ jobs:
             cmake libffi-dev libssl-dev wget \
             build-essential libltdl-dev
 
+      # ✅ CACHÉ — guarda todo lo que buildozer descarga/compila
+      - name: Cache buildozer global
+        uses: actions/cache@v4
+        with:
+          path: ~/.buildozer
+          key: buildozer-${{ runner.os }}-${{ hashFiles('buildozer.spec') }}
+          restore-keys: |
+            buildozer-${{ runner.os }}-
+
+      # ✅ CACHÉ — guarda el gradle de Android
+      - name: Cache gradle
+        uses: actions/cache@v4
+        with:
+          path: ~/.gradle
+          key: gradle-${{ runner.os }}-${{ hashFiles('**/*.gradle*') }}
+          restore-keys: |
+            gradle-${{ runner.os }}-
+
       - name: Install Android SDK into buildozer cache
         run: |
           SDK_DIR="$HOME/.buildozer/android/platform/android-sdk"
-          mkdir -p "$SDK_DIR/cmdline-tools"
 
-          wget -q https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -O /tmp/sdk.zip
-          unzip -q /tmp/sdk.zip -d "$SDK_DIR/cmdline-tools"
-          mv "$SDK_DIR/cmdline-tools/cmdline-tools" "$SDK_DIR/cmdline-tools/latest"
+          # Solo instalar si no existe en caché
+          if [ ! -d "$SDK_DIR/cmdline-tools/latest" ]; then
+            mkdir -p "$SDK_DIR/cmdline-tools"
+            wget -q https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -O /tmp/sdk.zip
+            unzip -q /tmp/sdk.zip -d "$SDK_DIR/cmdline-tools"
+            mv "$SDK_DIR/cmdline-tools/cmdline-tools" "$SDK_DIR/cmdline-tools/latest"
+          fi
 
           mkdir -p "$SDK_DIR/tools/bin"
           ln -sf "$SDK_DIR/cmdline-tools/latest/bin/sdkmanager" "$SDK_DIR/tools/bin/sdkmanager"
@@ -56,10 +77,10 @@ jobs:
       - name: Set Android environment
         run: |
           SDK_DIR="$HOME/.buildozer/android/platform/android-sdk"
-          echo "ANDROID_HOME=$SDK_DIR"               >> $GITHUB_ENV
-          echo "ANDROID_SDK_ROOT=$SDK_DIR"           >> $GITHUB_ENV
-          echo "$SDK_DIR/cmdline-tools/latest/bin"   >> $GITHUB_PATH
-          echo "$SDK_DIR/platform-tools"             >> $GITHUB_PATH
+          echo "ANDROID_HOME=$SDK_DIR"             >> $GITHUB_ENV
+          echo "ANDROID_SDK_ROOT=$SDK_DIR"         >> $GITHUB_ENV
+          echo "$SDK_DIR/cmdline-tools/latest/bin" >> $GITHUB_PATH
+          echo "$SDK_DIR/platform-tools"           >> $GITHUB_PATH
 
       - name: Accept Android licenses
         run: |
@@ -74,13 +95,8 @@ jobs:
             "platforms;android-34" \
             "build-tools;34.0.0"
 
-      # Ya no se necesita patch porque buildozer.spec ya tiene los valores correctos
       - name: Verify buildozer.spec values
         run: |
-          echo "=== Valores android en buildozer.spec ==="
-          grep "android\." buildozer.spec || true
-
-          # Asegurar sdk_path por si acaso
           if grep -q "android.sdk_path" buildozer.spec; then
             sed -i "s|^#*\s*android\.sdk_path\s*=.*|android.sdk_path = $HOME/.buildozer/android/platform/android-sdk|" buildozer.spec
           else
