@@ -26,29 +26,75 @@ jobs:
       - name: Install Python dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install buildozer cython
+          pip install buildozer==1.5.0 cython==0.29.37
 
       - name: Install system packages
         run: |
           sudo apt update
-          sudo apt install -y git zip unzip autoconf libtool pkg-config \
-            zlib1g-dev libncurses5-dev libncursesw5-dev cmake libffi-dev \
-            libssl-dev wget build-essential ccache \
-            libgstreamer1.0-dev gstreamer1.0-plugins-base \
-            libltdl-dev
+          sudo apt install -y \
+            git zip unzip autoconf libtool pkg-config \
+            zlib1g-dev libncurses5-dev libncursesw5-dev \
+            cmake libffi-dev libssl-dev wget \
+            build-essential libltdl-dev
+
+      - name: Install Android SDK
+        run: |
+          mkdir -p $HOME/android-sdk/cmdline-tools
+          cd $HOME/android-sdk/cmdline-tools
+          wget -q https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -O sdk.zip
+          unzip -q sdk.zip
+          mv cmdline-tools latest
 
       - name: Set Android environment
         run: |
-          echo "ANDROID_HOME=$HOME/.buildozer/android/platform/android-sdk" >> $GITHUB_ENV
-          echo "ANDROID_SDK_ROOT=$HOME/.buildozer/android/platform/android-sdk" >> $GITHUB_ENV
+          echo "ANDROID_HOME=$HOME/android-sdk"       >> $GITHUB_ENV
+          echo "ANDROID_SDK_ROOT=$HOME/android-sdk"   >> $GITHUB_ENV
+          echo "$HOME/android-sdk/cmdline-tools/latest/bin" >> $GITHUB_PATH
+          echo "$HOME/android-sdk/platform-tools"     >> $GITHUB_PATH
+
+      - name: Accept Android licenses
+        run: yes | sdkmanager --licenses || true
+
+      - name: Install Android SDK components
+        run: |
+          sdkmanager --install \
+            "platform-tools" \
+            "platforms;android-33" \
+            "build-tools;33.0.2"
+
+      - name: Symlink SDK into buildozer cache
+        run: |
+          mkdir -p ~/.buildozer/android/platform
+          ln -sfn $HOME/android-sdk ~/.buildozer/android/platform/android-sdk
+
+      - name: Patch buildozer.spec
+        run: |
+          # API y build-tools
+          sed -i 's/^#*\s*android\.api\s*=.*/android.api = 33/'                           buildozer.spec
+          sed -i 's/^#*\s*android\.minapi\s*=.*/android.minapi = 21/'                     buildozer.spec
+          sed -i 's/^#*\s*android\.build_tools_version\s*=.*/android.build_tools_version = 33.0.2/' buildozer.spec
+          sed -i 's/^#*\s*android\.ndk_version\s*=.*/android.ndk_version = 25b/'          buildozer.spec
+
+          # Evitar que buildozer descargue su propio SDK
+          grep -q "android.sdk_path" buildozer.spec \
+            && sed -i "s|^#*\s*android\.sdk_path\s*=.*|android.sdk_path = $HOME/android-sdk|" buildozer.spec \
+            || echo "android.sdk_path = $HOME/android-sdk" >> buildozer.spec
 
       - name: Build APK
-        run: |
-          export PATH=$PATH:$HOME/.local/bin
-          buildozer android debug
+        env:
+          ANDROID_HOME: ${{ env.ANDROID_HOME }}
+          ANDROID_SDK_ROOT: ${{ env.ANDROID_SDK_ROOT }}
+        run: buildozer -v android debug 2>&1 | tee build.log
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: Hydronix-APK
           path: bin/*.apk
+
+      - name: Upload build log (si falla)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-log
+          path: build.log
