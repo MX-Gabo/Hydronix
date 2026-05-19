@@ -32,10 +32,20 @@ jobs:
             zlib1g-dev libncurses5-dev libncursesw5-dev \
             libtinfo5 cmake libffi-dev libssl-dev
 
+      - name: Accept Android licenses
+        run: |
+          yes | sdkmanager --licenses || true
+
+      - name: Install Android SDK components
+        run: |
+          sdkmanager "platform-tools"
+          sdkmanager "platforms;android-33"
+          sdkmanager "build-tools;33.0.0"
+
       - name: Build APK
         run: |
           buildozer android debug
- 
+
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
