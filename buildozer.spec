@@ -20,6 +20,11 @@ fullscreen = 0
 
 android.permissions = INTERNET
 
+android.api = 34
+android.minapi = 26
+android.build_tools_version = 34.0.0
+android.ndk_version = 28c
+
 [buildozer]
 
 log_level = 2

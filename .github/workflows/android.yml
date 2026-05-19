@@ -40,7 +40,6 @@ jobs:
             cmake libffi-dev libssl-dev wget \
             build-essential libltdl-dev
 
-      # Instalar el SDK DIRECTAMENTE donde buildozer lo busca
       - name: Install Android SDK into buildozer cache
         run: |
           SDK_DIR="$HOME/.buildozer/android/platform/android-sdk"
@@ -50,7 +49,6 @@ jobs:
           unzip -q /tmp/sdk.zip -d "$SDK_DIR/cmdline-tools"
           mv "$SDK_DIR/cmdline-tools/cmdline-tools" "$SDK_DIR/cmdline-tools/latest"
 
-          # Crear el enlace que buildozer busca en la ruta legacy
           mkdir -p "$SDK_DIR/tools/bin"
           ln -sf "$SDK_DIR/cmdline-tools/latest/bin/sdkmanager" "$SDK_DIR/tools/bin/sdkmanager"
           ln -sf "$SDK_DIR/cmdline-tools/latest/bin/avdmanager"  "$SDK_DIR/tools/bin/avdmanager"
@@ -58,10 +56,10 @@ jobs:
       - name: Set Android environment
         run: |
           SDK_DIR="$HOME/.buildozer/android/platform/android-sdk"
-          echo "ANDROID_HOME=$SDK_DIR"      >> $GITHUB_ENV
-          echo "ANDROID_SDK_ROOT=$SDK_DIR"  >> $GITHUB_ENV
-          echo "$SDK_DIR/cmdline-tools/latest/bin" >> $GITHUB_PATH
-          echo "$SDK_DIR/platform-tools"           >> $GITHUB_PATH
+          echo "ANDROID_HOME=$SDK_DIR"               >> $GITHUB_ENV
+          echo "ANDROID_SDK_ROOT=$SDK_DIR"           >> $GITHUB_ENV
+          echo "$SDK_DIR/cmdline-tools/latest/bin"   >> $GITHUB_PATH
+          echo "$SDK_DIR/platform-tools"             >> $GITHUB_PATH
 
       - name: Accept Android licenses
         run: |
@@ -73,17 +71,16 @@ jobs:
           SDK_DIR="$HOME/.buildozer/android/platform/android-sdk"
           "$SDK_DIR/cmdline-tools/latest/bin/sdkmanager" \
             "platform-tools" \
-            "platforms;android-33" \
-            "build-tools;33.0.2"
+            "platforms;android-34" \
+            "build-tools;34.0.0"
 
-      - name: Patch buildozer.spec
+      # Ya no se necesita patch porque buildozer.spec ya tiene los valores correctos
+      - name: Verify buildozer.spec values
         run: |
-          sed -i 's/^#*\s*android\.api\s*=.*/android.api = 33/'                                     buildozer.spec
-          sed -i 's/^#*\s*android\.minapi\s*=.*/android.minapi = 21/'                               buildozer.spec
-          sed -i 's/^#*\s*android\.build_tools_version\s*=.*/android.build_tools_version = 33.0.2/' buildozer.spec
-          sed -i 's/^#*\s*android\.ndk_version\s*=.*/android.ndk_version = 28c/'                    buildozer.spec
+          echo "=== Valores android en buildozer.spec ==="
+          grep "android\." buildozer.spec || true
 
-          # Decirle a buildozer exactamente donde esta el SDK
+          # Asegurar sdk_path por si acaso
           if grep -q "android.sdk_path" buildozer.spec; then
             sed -i "s|^#*\s*android\.sdk_path\s*=.*|android.sdk_path = $HOME/.buildozer/android/platform/android-sdk|" buildozer.spec
           else
