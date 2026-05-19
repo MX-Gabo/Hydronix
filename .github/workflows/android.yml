@@ -1,112 +1,122 @@
-```yaml
-name: Build Android APK
+name: Hidroxyn APK
 
 on:
-  push:
-    branches:
-      - main
+push:
+branches:
+- main
 
 jobs:
-  build:
-    runs-on: ubuntu-22.04
+build:
+runs-on: ubuntu-22.04
 
-    steps:
 
-      # ==========================
-      # CLONAR REPOSITORIO
-      # ==========================
-      - name: Checkout repository
-        uses: actions/checkout@v4
+steps:
 
-      # ==========================
-      # PYTHON
-      # ==========================
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
+  # ==========================================
+  # CLONAR REPOSITORIO
+  # ==========================================
+  - name: Checkout repository
+    uses: actions/checkout@v4
 
-      # ==========================
-      # JAVA
-      # ==========================
-      - name: Set up Java
-        uses: actions/setup-java@v4
-        with:
-          distribution: "temurin"
-          java-version: "17"
+  # ==========================================
+  # PYTHON
+  # ==========================================
+  - name: Set up Python
+    uses: actions/setup-python@v5
+    with:
+      python-version: "3.11"
 
-      # ==========================
-      # INSTALAR DEPENDENCIAS
-      # ==========================
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install buildozer cython
+  # ==========================================
+  # JAVA
+  # ==========================================
+  - name: Set up Java
+    uses: actions/setup-java@v4
+    with:
+      distribution: "temurin"
+      java-version: "17"
 
-      # ==========================
-      # DEPENDENCIAS DEL SISTEMA
-      # ==========================
-      - name: Install system packages
-        run: |
-          sudo apt update
-          sudo apt install -y \
-            git zip unzip autoconf libtool pkg-config \
-            zlib1g-dev libncurses5-dev libncursesw5-dev \
-            cmake libffi-dev libssl-dev
+  # ==========================================
+  # INSTALAR DEPENDENCIAS PYTHON
+  # ==========================================
+  - name: Install Python dependencies
+    run: |
+      python -m pip install --upgrade pip
+      pip install buildozer cython
 
-      # ==========================
-      # INSTALAR ANDROID SDK
-      # ==========================
-      - name: Install Android SDK
-        run: |
-          mkdir -p $HOME/android-sdk/cmdline-tools
-          cd $HOME/android-sdk/cmdline-tools
+  # ==========================================
+  # DEPENDENCIAS DEL SISTEMA
+  # ==========================================
+  - name: Install system packages
+    run: |
+      sudo apt update
+      sudo apt install -y \
+        git \
+        zip \
+        unzip \
+        autoconf \
+        libtool \
+        pkg-config \
+        zlib1g-dev \
+        libncurses5-dev \
+        libncursesw5-dev \
+        cmake \
+        libffi-dev \
+        libssl-dev \
+        wget
 
-          wget https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -O sdk.zip
+  # ==========================================
+  # INSTALAR ANDROID SDK
+  # ==========================================
+  - name: Install Android SDK
+    run: |
+      mkdir -p $HOME/android-sdk/cmdline-tools
+      cd $HOME/android-sdk/cmdline-tools
 
-          unzip sdk.zip
+      wget https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -O sdk.zip
 
-          mv cmdline-tools latest
+      unzip sdk.zip
 
-      # ==========================
-      # VARIABLES DE ENTORNO
-      # ==========================
-      - name: Set Android environment
-        run: |
-          echo "ANDROID_HOME=$HOME/android-sdk" >> $GITHUB_ENV
-          echo "ANDROID_SDK_ROOT=$HOME/android-sdk" >> $GITHUB_ENV
-          echo "$HOME/android-sdk/cmdline-tools/latest/bin" >> $GITHUB_PATH
-          echo "$HOME/android-sdk/platform-tools" >> $GITHUB_PATH
+      mv cmdline-tools latest
 
-      # ==========================
-      # ACEPTAR LICENCIAS
-      # ==========================
-      - name: Accept Android licenses
-        run: |
-          yes | sdkmanager --licenses
+  # ==========================================
+  # VARIABLES DE ENTORNO
+  # ==========================================
+  - name: Set Android environment
+    run: |
+      echo "ANDROID_HOME=$HOME/android-sdk" >> $GITHUB_ENV
+      echo "ANDROID_SDK_ROOT=$HOME/android-sdk" >> $GITHUB_ENV
+      echo "$HOME/android-sdk/cmdline-tools/latest/bin" >> $GITHUB_PATH
+      echo "$HOME/android-sdk/platform-tools" >> $GITHUB_PATH
 
-      # ==========================
-      # INSTALAR COMPONENTES
-      # ==========================
-      - name: Install Android components
-        run: |
-          sdkmanager "platform-tools"
-          sdkmanager "platforms;android-33"
-          sdkmanager "build-tools;33.0.0"
+  # ==========================================
+  # ACEPTAR LICENCIAS
+  # ==========================================
+  - name: Accept Android licenses
+    run: |
+      yes | sdkmanager --licenses
 
-      # ==========================
-      # BUILD APK
-      # ==========================
-      - name: Build APK
-        run: |
-          buildozer android debug
+  # ==========================================
+  # INSTALAR COMPONENTES ANDROID
+  # ==========================================
+  - name: Install Android SDK components
+    run: |
+      sdkmanager "platform-tools"
+      sdkmanager "platforms;android-33"
+      sdkmanager "build-tools;33.0.0"
 
-      # ==========================
-      # SUBIR APK
-      # ==========================
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: Hydronix-APK
-          path: bin/*.apk
-```
+  # ==========================================
+  # COMPILAR APK
+  # ==========================================
+  - name: Build APK
+    run: |
+      buildozer android debug
+
+  # ==========================================
+  # SUBIR APK
+  # ==========================================
+  - name: Upload APK
+    uses: actions/upload-artifact@v4
+    with:
+      name: Hydronix-APK
+      path: bin/*.apk
+
